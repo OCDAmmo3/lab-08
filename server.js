@@ -86,7 +86,7 @@ app.get('/events', (request, response) => {
 				superagent.get(`https://www.eventbriteapi.com/v3/events/search?token=${process.env.EVENTBRITEAPI_KEY}&location.address=${request.query.data.formatted_query}&location.within=10km`)
 				.then((eventData) => {
 					const sliceIndex = eventData.body.events.length > 20 ? 20 : eventData.body.events.length;
-					const events = eventData.body.events.slice(0, sliceIndex).map((event) => new Event(event));
+					const events = eventData.body.events.slice(0, sliceIndex).map((event) => new Event(event.body));
 					SQL = 'INSERT INTO events (link, eventname, event_date, summary) VALUES($1, $2, $3, $4)'
 					VALUES = Object.values(event);
 					client.query(SQL, VALUES).then(results => {
