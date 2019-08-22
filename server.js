@@ -42,7 +42,8 @@ function Location(query, geoData) {
 	this.longitude = geoData.results[0].geometry.location.lng;
 }
 
-function Event(link, name, event_date, summary) {
+function Event(search_query, link, name, event_date, summary) {
+	this.search_query = search_query
 	this.link = link;
 	this.name = name;
 	this.event_date = event_date;
@@ -74,8 +75,7 @@ app.get('/location', (request, response) => {
 app.get('/events', (request, response) => {
 	select('events', 'search_query', request.query.data.search_query).then(results => {
 		if (results.rows.length === 0) {
-			superagent
-				.get(`https://www.eventbriteapi.com/v3/events/search/?token=${process.env.EVENTBRITE_API_KEY}&location.address=${request.query.data.search_query}&location.within=10km`)
+			superagent.get(`https://www.eventbriteapi.com/v3/events/search/?token=${process.env.EVENTBRITE_API_KEY}&location.address=${request.query.data.search_query}&location.within=10km`)
 				.then((eventData) => {
 					const sliceIndex = eventData.body.events.length > 20 ? 20 : eventData.body.events.length;
 					const events = eventData.body.events.slice(0, sliceIndex).map((event) => new Event(request.query.data.search_query, event.url, event.name.text, event.start.local, event.description.text));
@@ -96,23 +96,15 @@ app.get('/events', (request, response) => {
 });
 
 app.get('/weather', (req, res) => {
-	try {
-		console.log(req.query.data);
+	select('weather', 'search_query', request.query.data.search_query).then(results => {
+		if(results.rows.length === 0) {
 		superagent.get(`https://api.darksky.net/forecast/${process.env.DARKSKYAPI_KEY}/${req.query.data.latitude},${req.query.data.longitude}`)
 			.then((weatherData) => {
-				console.log(weatherData.body.daily.data);
 				let weather = weatherData.body.daily.data.map((day) => {
 					return new Weather(day);
 				})
 				res.send(weather)
-			});
-	}
-	catch (error) {
-		res.status(500).send({
-			status: 500,
-			responseText: error.message
-		});
-	}
+			}).catch(error => console.log(error));
 });
 
 const PORT = process.env.PORT || 3000;
