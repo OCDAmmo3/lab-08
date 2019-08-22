@@ -10,6 +10,7 @@ CREATE TABLE locations(
 );
 
 CREATE TABLE weather(
+    search_query VARCHAR(255),
     forecast VARCHAR(255),
     day VARCHAR(255)
 );

@@ -31,7 +31,6 @@ function select(table, column, value) {
 }
 
 function Weather(weatherData) {
-  this.search_query = search_query;
   this.forecast = weatherData.summary;
   this.time = new Date(weatherData.time * 1000).toString().slice(0, 15);
 }
@@ -87,7 +86,7 @@ app.get('/events', (request, response) => {
           console.log('API');
           response.send(events);
         })
-        .catch((error) => handleError(error, response));
+        .catch((error) => console.log(error));
     }
     else {
       response.send(results.rows);
@@ -99,17 +98,18 @@ app.get('/events', (request, response) => {
 app.get('/weather', (request, response) => {
   select('weather', 'search_query', request.query.data.search_query).then(results => {
     if(results.rows.length === 0) {
-      superagent.get(`https://api.darksky.net/forecast/${process.env.DARKSKYAPI_KEY}/${req.query.data.latitude},${req.query.data.longitude}`)
+      superagent.get(`https://api.darksky.net/forecast/${process.env.DARKSKYAPI_KEY}/${request.query.data.latitude},${request.query.data.longitude}`)
         .then((weatherData) => {
-          let weather = weatherData.body.daily.data.map((day) => new Weather(request.query.data.search_query, day.forecast, day.time));
+          let weather = weatherData.body.daily.data.map((day) => new Weather(day.forecast, day.time));
           weather.forEach((weather) => {
-            const query = 'INSERT INTO weather (search_query, forecast, time,) VALUES ($1, $2, $3)';
-            client.query(query, Object.values(weather));
+						const query = 'INSERT INTO weather (latitude, longitude, forecast, time) VALUES ($1, $2, $3, $4)';
+						const values = [request.query.data.latitude, request.query.data.longitude, ...Object.values(weather)];
+            client.query(query, values);
           });
           console.log('other API');
           response.send(weather);
         })
-        .catch((error) => handleError(error, response));
+        .catch((error) => console.log(error));
     }
     else{
       response.send(results.rows);
