@@ -4,7 +4,7 @@ require('dotenv').config();
 const superagent = require('superagent');
 const pg = require('pg');
 
-const client = new pg.Client(process.env.DB_CONNECTION_STRING);
+const client = new pg.Client(process.env.DATABASE_URL);
 client.connect();
 
 const app = express();
