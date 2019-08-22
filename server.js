@@ -23,6 +23,12 @@ app.use(cors());
   ...
 ]
 */
+function select(table, column, value) {
+	const SQL = `SELECT * FROM ${table} WHERE ${column}=$1`;
+	const VALUES = [value];
+	console.log(value);
+	return client.query(SQL, VALUES);
+}
 
 function Weather(weatherData) {
 	this.forecast = weatherData.summary;
@@ -36,73 +42,57 @@ function Location(query, geoData) {
 	this.longitude = geoData.results[0].geometry.location.lng;
 }
 
-function Event(eventData) {
-	this.link = eventData.url;
-	this.name = eventData.name.text;
-	this.event_date = eventData.url;
-	this.summary = eventData.description.text;
+function Event(link, name, event_date, summary) {
+	this.link = link;
+	this.name = name;
+	this.event_date = event_date;
+	this.summary = summary;
 }
 
 // const geoData = require('./data/geo.json');
 // const weatherData = require('./data/darksky.json');
 
 app.get('/location', (request, response) => {
-	try {
-		let SQL = 'SELECT * FROM locations WHERE search_query=$1;';
-		let VALUES = [request.query.data];
-
-		client.query(SQL, VALUES).then(results => {
-			if (results.rows.length === 0) {
-				superagent.get(`https://maps.googleapis.com/maps/api/geocode/json?address=${request.query.data}&key=${process.env.GEOCODEAPI_KEY}`)
-					.then((geoData) => {
-						const location = new Location(request.query.location, geoData.body);
-						SQL = 'INSERT INTO locations (search_query, formatted_query, latitude, longitude) VALUES($1, $2, $3, $4)'
-						VALUES = Object.values(location);
-						client.query(SQL, VALUES).then(results => {
-							response.send(location);
-						});
+	select('locations', 'search_query', request.query.data).then(results => {
+		if (results.rows.length === 0) {
+			superagent.get(`https://maps.googleapis.com/maps/api/geocode/json?address=${request.query.data}&key=${process.env.GEOCODEAPI_KEY}`)
+				.then((geoData) => {
+					const location = new Location(request.query.location, geoData.body);
+					SQL = 'INSERT INTO locations (search_query, formatted_query, latitude, longitude) VALUES($1, $2, $3, $4)'
+					VALUES = Object.values(location);
+					client.query(SQL, VALUES).then(results => {
+						response.send(location);
 					});
-			} else {
-				console.log('I came from database')
-				response.send(results);
-			}
-		});
-	}
-	catch (error) {
-		response.status(500).send({
-			status: 500,
-			responseText: error.message
-		});
-	}
+				});
+		} else {
+			console.log('I came from database')
+			response.send(results);
+		}
+	}).catch(error => console.log(error));
 });
 
 app.get('/events', (request, response) => {
-	try {
-		let SQL = 'SELECT * FROM events WHERE link=$1;';
-		let VALUES = [request.query.data.id]
-
-		client.query(SQL, VALUES).then(results => {
-			if(results.rows.length === 0){
-				superagent.get(`https://www.eventbriteapi.com/v3/events/search?token=${process.env.EVENTBRITEAPI_KEY}&location.address=${request.query.data.formatted_query}&location.within=10km`)
+	select('events', 'search_query', request.query.data.search_query).then(results => {
+		if (results.rows.length === 0) {
+			superagent
+				.get(`https://www.eventbriteapi.com/v3/events/search/?token=${process.env.EVENTBRITE_API_KEY}&location.address=${request.query.data.search_query}&location.within=10km`)
 				.then((eventData) => {
 					const sliceIndex = eventData.body.events.length > 20 ? 20 : eventData.body.events.length;
-					const events = eventData.body.events.slice(0, sliceIndex).map((event) => new Event(event.body));
-					SQL = 'INSERT INTO events (link, eventname, event_date, summary) VALUES($1, $2, $3, $4)'
-					VALUES = Object.values(event);
-					client.query(SQL, VALUES).then(results => {
-						response.send(events);
+					const events = eventData.body.events.slice(0, sliceIndex).map((event) => new Event(request.query.data.search_query, event.url, event.name.text, event.start.local, event.description.text));
+					events.forEach((event) => {
+						const query = 'INSERT INTO events (search_query, link, name, event_date, summary) VALUES ($1, $2, $3, $4, $5)';
+						client.query(query, Object.values(event));
 					});
-				});
-			} else {
-				response.send(results)
-			}
-		});
-	} catch (error) {
-		response.status(500).send({
-			status: 500,
-			responseText: error.message
-		});
-	}
+					console.log('API');
+					response.send(events);
+				})
+				.catch((error) => handleError(error, response));
+		}
+		else {
+			response.send(results.rows[0]);
+			console.log('DB');
+		}
+	}).catch(error => console.log(error));
 });
 
 app.get('/weather', (req, res) => {
