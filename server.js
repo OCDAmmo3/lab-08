@@ -75,12 +75,12 @@ app.get('/location', (request, response) => {
 app.get('/events', (request, response) => {
 	select('events', 'search_query', request.query.data.search_query).then(results => {
 		if (results.rows.length === 0) {
-			superagent.get(`https://www.eventbriteapi.com/v3/events/search/?token=${process.env.EVENTBRITE_API_KEY}&location.address=${request.query.data.search_query}&location.within=10km`)
+			superagent.get(`https://www.eventbriteapi.com/v3/events/search/?token=${process.env.EVENTBRITEAPI_KEY}&location.address=${request.query.data.search_query}&location.within=10km`)
 				.then((eventData) => {
 					const sliceIndex = eventData.body.events.length > 20 ? 20 : eventData.body.events.length;
 					const events = eventData.body.events.slice(0, sliceIndex).map((event) => new Event(request.query.data.search_query, event.url, event.name.text, event.start.local, event.description.text));
 					events.forEach((event) => {
-						const query = 'INSERT INTO events (search_query, link, name, event_date, summary) VALUES ($1, $2, $3, $4, $5)';
+						const query = 'INSERT INTO events (search_query, link, event_name, event_date, summary) VALUES ($1, $2, $3, $4, $5)';
 						client.query(query, Object.values(event));
 					});
 					console.log('API');
@@ -89,23 +89,23 @@ app.get('/events', (request, response) => {
 				.catch((error) => handleError(error, response));
 		}
 		else {
-			response.send(results.rows[0]);
+			response.send(results.rows);
 			console.log('DB');
 		}
 	}).catch(error => console.log(error));
 });
 
-app.get('/weather', (req, res) => {
-	select('weather', 'search_query', request.query.data.search_query).then(results => {
-		if(results.rows.length === 0) {
-		superagent.get(`https://api.darksky.net/forecast/${process.env.DARKSKYAPI_KEY}/${req.query.data.latitude},${req.query.data.longitude}`)
-			.then((weatherData) => {
-				let weather = weatherData.body.daily.data.map((day) => {
-					return new Weather(day);
-				})
-				res.send(weather)
-			}).catch(error => console.log(error));
-});
+// app.get('/weather', (req, res) => {
+// 	select('weather', 'search_query', request.query.data.search_query).then(results => {
+// 		if(results.rows.length === 0) {
+// 		superagent.get(`https://api.darksky.net/forecast/${process.env.DARKSKYAPI_KEY}/${req.query.data.latitude},${req.query.data.longitude}`)
+// 			.then((weatherData) => {
+// 				let weather = weatherData.body.daily.data.map((day) => {
+// 					return new Weather(day);
+// 				})
+// 				res.send(weather)
+// 			}).catch(error => console.log(error));
+// });
 
 const PORT = process.env.PORT || 3000;
 

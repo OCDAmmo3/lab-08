@@ -1,4 +1,6 @@
 DROP TABLE IF EXISTS locations;
+DROP TABLE IF EXISTS weather;
+DROP TABLE IF EXISTS events;
 
 CREATE TABLE locations(
     search_query VARCHAR(255),
@@ -13,6 +15,7 @@ CREATE TABLE weather(
 );
 
 CREATE TABLE events(
+    search_query VARCHAR(255),
     link VARCHAR,
     event_name VARCHAR(255),
     event_date DATE,
