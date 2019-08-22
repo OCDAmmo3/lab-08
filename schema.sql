@@ -13,5 +13,8 @@ CREATE TABLE weather(
 );
 
 CREATE TABLE events(
-
+    link VARCHAR,
+    eventname VARCHAR(255),
+    event_date DATE,
+    summary VARCHAR
 );

@@ -51,10 +51,7 @@ app.get('/location', (request, response) => {
 		let SQL = 'SELECT * FROM locations WHERE search_query=$1;';
 		let VALUES = [request.query.data];
 
-		console.log(request.query.data);
-
 		client.query(SQL, VALUES).then(results => {
-			console.log("RESULTS", results.rows);
 			if (results.rows.length === 0) {
 				superagent.get(`https://maps.googleapis.com/maps/api/geocode/json?address=${request.query.data}&key=${process.env.GEOCODEAPI_KEY}`)
 					.then((geoData) => {
@@ -62,7 +59,6 @@ app.get('/location', (request, response) => {
 						SQL = 'INSERT INTO locations (search_query, formatted_query, latitude, longitude) VALUES($1, $2, $3, $4)'
 						VALUES = Object.values(location);
 						client.query(SQL, VALUES).then(results => {
-							console.log(results);
 							response.send(location);
 						});
 					});
@@ -82,14 +78,25 @@ app.get('/location', (request, response) => {
 
 app.get('/events', (request, response) => {
 	try {
-		console.log(request.query)
-		superagent.get(`https://www.eventbriteapi.com/v3/events/search?token=${process.env.EVENTBRITEAPI_KEY}&location.address=${request.query.data.formatted_query}&location.within=10km`)
-		.then((eventData) => {
-			const sliceIndex = eventData.body.events.length > 20 ? 20 : eventData.body.events.length;
-			console.log(eventData.body)
-			const events = eventData.body.events.slice(0, sliceIndex).map((event) => new Event(event));
-			response.send(events);
-		})
+		let SQL = 'SELECT * FROM events WHERE link=$1;';
+		let VALUES = [request.query.data.id]
+
+		client.query(SQL, VALUES).then(results => {
+			if(results.rows.length === 0){
+				superagent.get(`https://www.eventbriteapi.com/v3/events/search?token=${process.env.EVENTBRITEAPI_KEY}&location.address=${request.query.data.formatted_query}&location.within=10km`)
+				.then((eventData) => {
+					const sliceIndex = eventData.body.events.length > 20 ? 20 : eventData.body.events.length;
+					const events = eventData.body.events.slice(0, sliceIndex).map((event) => new Event(event));
+					SQL = 'INSERT INTO events (link, eventname, event_date, summary) VALUES($1, $2, $3, $4)'
+					VALUES = Object.values(event);
+					client.query(SQL, VALUES).then(results => {
+						response.send(events);
+					});
+				});
+			} else {
+				response.send(results)
+			}
+		});
 	} catch (error) {
 		response.status(500).send({
 			status: 500,
