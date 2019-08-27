@@ -158,7 +158,8 @@ function getWeather(request, response){
       const url = `https://api.darksky.net/forecast/${process.env.WEATHER_API_KEY}/${request.query.data.latitude},${request.query.data.longitude}`
       superagent.get(url)
         .then(weatherData => {
-          const weatherSummaries = weatherData.body.map(business => {
+          console.log(weatherData);
+          const weatherSummaries = weatherData.body.hourly.data.map(day => {
             const summary = new Weather(day);
             summary.save(request.query.data.id);
             return summary;
