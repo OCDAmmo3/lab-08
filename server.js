@@ -15,7 +15,7 @@ app.use(cors());
 app.get('/location', getLocation);
 app.get('/weather', getWeather);
 app.get('/events', getEvents);
-app.get('/yelps', getYelps);
+app.get('/yelp', getYelps);
 app.get('/movies', getMovies);
 
 const timeouts = {
