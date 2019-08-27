@@ -20,9 +20,9 @@ app.get('/movies', getMovies);
 
 const timeouts = {
   weather: 15000,
-  events: 15000,
-  yelps: 15000,
-  movies: 15000
+  events: 21600000,
+  yelps: 86400000,
+  movies: 2592000000
 }
 
 function Location(query, geoData) {
